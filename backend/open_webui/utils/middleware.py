@@ -1917,6 +1917,13 @@ async def convert_url_images_to_base64(form_data):
 
     return form_data
 
+def get_rakef_identity(chat_id: Optional[str], user_id: str) -> Optional[str]:
+    """Get Rakef identity from chat meta if available."""
+    if chat_id and not chat_id.startswith("local:"):
+        chat = Chats.get_chat_by_id_and_user_id(chat_id, user_id)
+        if chat and chat.meta and chat.meta.get("rakef_identity"):
+            return chat.meta["rakef_identity"]
+    return None
 
 def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
@@ -2361,6 +2368,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = (
                                 metadata.get("message_id")
                             )
+                    
+                    # Get Rakef identity for this chat
+                    rakef_identity = get_rakef_identity(metadata.get("chat_id", None), user.id)
+                    if rakef_identity:
+                        headers["x-rakef-identity"] = rakef_identity
 
                     mcp_clients[server_id] = MCPClient()
                     await mcp_clients[server_id].connect(
@@ -2378,7 +2390,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     tool_specs = await mcp_clients[server_id].list_tool_specs()
                     for tool_spec in tool_specs:
 
-                        def make_tool_function(client, function_name):
+                        def make_tool_function(client: MCPClient, function_name: str, rakef_identity: str):
                             async def tool_function(**kwargs):
                                 return await client.call_tool(
                                     function_name,
@@ -2395,7 +2407,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 continue
 
                         tool_function = make_tool_function(
-                            mcp_clients[server_id], tool_spec["name"]
+                            mcp_clients[server_id], tool_spec["name"], rakef_identity
                         )
 
                         mcp_tools_dict[f"{server_id}_{tool_spec['name']}"] = {

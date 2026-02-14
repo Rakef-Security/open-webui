@@ -291,10 +291,16 @@ class ChatTable:
         return changed
 
     def insert_new_chat(
-        self, user_id: str, form_data: ChatForm, db: Optional[Session] = None
+        self, user_id: str, form_data: ChatForm, db: Optional[Session], rakef_identity: Optional[str] = None
     ) -> Optional[ChatModel]:
         with get_db_context(db) as db:
             id = str(uuid.uuid4())
+            
+            # Prepare meta with rakef_identity if provided
+            meta = {}
+            if rakef_identity:
+                meta["rakef_identity"] = rakef_identity
+            
             chat = ChatModel(
                 **{
                     "id": id,
@@ -306,6 +312,7 @@ class ChatTable:
                     ),
                     "chat": self._clean_null_bytes(form_data.chat),
                     "folder_id": form_data.folder_id,
+                    "meta": meta,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -894,6 +901,13 @@ class ChatTable:
                 .all()
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def get_rakef_identity_by_chat_id(self, id: str) -> Optional[str]:
+        """Get the Rakef identity stored in the chat's meta field."""
+        chat = self.get_chat_by_id(id)
+        if chat and chat.meta:
+            return chat.meta.get("rakef_identity")
+        return None
 
     def get_chat_by_id(
         self, id: str, db: Optional[Session] = None

@@ -2764,6 +2764,28 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
+####################################
+# RAKEF
+####################################
+
+RAKEF_AUTH_URL = PersistentConfig(
+    "RAKEF_AUTH_URL",
+    "rakef.auth_url",
+    os.environ.get("RAKEF_AUTH_URL", "http://authorizer:9000"),
+)
+
+RAKEF_CLIENT_TOKEN = PersistentConfig(
+    "RAKEF_CLIENT_TOKEN",
+    "rakef.client_token",
+    os.environ.get("RAKEF_CLIENT_TOKEN", ""),
+)
+
+RAKEF_TOOL_NAME = PersistentConfig(
+    "RAKEF_TOOL_NAME",
+    "rakef.tool_name",
+    os.environ.get("RAKEF_TOOL_NAME", "open-webui"),
+)
+
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))

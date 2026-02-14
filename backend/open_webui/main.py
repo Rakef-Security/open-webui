@@ -294,6 +294,10 @@ from open_webui.config import (
     PDF_LOADER_MODE,
     YOUTUBE_LOADER_LANGUAGE,
     YOUTUBE_LOADER_PROXY_URL,
+    # Rakef
+    RAKEF_AUTH_URL,
+    RAKEF_CLIENT_TOKEN,
+    RAKEF_TOOL_NAME,
     # Retrieval (Web Search)
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
@@ -637,6 +641,14 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     asyncio.create_task(periodic_session_pool_cleanup())
+
+    # Initialize Rakef tool as part of system startup
+    from open_webui.utils.rakef import initialize_rakef_tool
+    app.state.rakef_tool = await initialize_rakef_tool(
+        auth_url=RAKEF_AUTH_URL.value,
+        tool_name=RAKEF_TOOL_NAME.value,
+        client_token=RAKEF_CLIENT_TOKEN.value,
+    )
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         try:

@@ -591,7 +591,98 @@ async def get_user_chat_list_by_user_id(
 ############################
 
 
+async def _generate_rakef_identity(
+    request: Request, user, chat: Optional[dict] = None
+) -> str:
+    """Generate Rakef identity for chat creation.
+    
+    Args:
+        request: FastAPI request object containing app state.
+        user: User object with email attribute.
+        chat: Optional chat payload (form_data.chat); model for this chat is derived from it.
+        
+    Returns:
+        Rakef identity string.
+        
+    Raises:
+        HTTPException: If Rakef tool is unavailable or identity generation fails.
+    """
+    if not hasattr(request.app.state, "rakef_tool") or not request.app.state.rakef_tool:
+        log.error("Rakef tool is not available. Cannot create chat.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Chat creation service is temporarily unavailable. Please try again later."
+        )
+    
+    # Derive model from chat (FE sends "models" list or "model" single value)
+    model_name = None
+    if chat:
+        if isinstance(chat.get("models"), list) and chat["models"]:
+            model_name = chat["models"][0]
+        else:
+            model_name = chat.get("model")
+
+    attributes = {"chat": "openwebui"}
+    if model_name:
+        attributes["model"] = model_name
+
+    try:
+        identity_response = await request.app.state.rakef_tool.generate_identity(
+            email=user.email,
+            expires_in_days=30,
+            context_attributes=attributes,
+        )
+        if identity_response and identity_response.identity:
+            rakef_identity = identity_response.identity
+            log.info(f"Generated Rakef identity for user {user.id} (email: {user.email}): {rakef_identity}")
+            return rakef_identity
+        else:
+            log.error(f"Rakef identity generation returned empty result for user {user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create new chat. Please try again."
+            )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        log.error(f"Failed to generate Rakef identity for user {user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create new chat. Please try again."
+        )
+
 @router.post("/new", response_model=Optional[ChatResponse])
+async def create_new_chat_wrapper(
+    form_data: ChatForm,
+    request: Request,
+    user=Depends(get_verified_user),
+    db: Session = Depends(get_session),
+):
+    try:
+        # Generate Rakef identity before creating chat - required for chat creation
+        rakef_identity = await _generate_rakef_identity(request, user, chat=form_data.chat)
+        
+        # Create chat only if identity was successfully generated
+        if not rakef_identity:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create new chat. Please try again."
+            )
+        
+        # Call original method logic with rakef_identity
+        chat = Chats.insert_new_chat(user.id, form_data, db=db, rakef_identity=rakef_identity)
+        
+        return ChatResponse(**chat.model_dump())
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
 async def create_new_chat(
     form_data: ChatForm,
     user=Depends(get_verified_user),
