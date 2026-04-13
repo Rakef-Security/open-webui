@@ -48,6 +48,7 @@ dependencies = [
 
     "tiktoken==0.12.0",
     "mcp==1.26.0",
+    "rakef-client",
 
     "openai==2.29.0",
     "anthropic==0.86.0",
@@ -175,6 +176,10 @@ open-webui = "open_webui:app"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.uv.sources]
+# Local rakef-client so uv sync --all-groups can resolve (path relative to repo root)
+rakef-client = { path = "../rakef/core/packages/python/rakef-client" }
 
 [tool.rye]
 managed = true

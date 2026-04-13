@@ -106,6 +106,7 @@ from open_webui.utils.tools import (
     get_terminal_tools,
 )
 from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.rakef import inject_rakef_identity_header
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.filter import (
     get_sorted_filter_ids,
@@ -2065,7 +2066,6 @@ async def convert_url_images_to_base64(form_data):
 
     return form_data
 
-
 def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[dict]]:
     """
     Load the message chain from DB up to message_id,
@@ -2534,6 +2534,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 headers[FORWARD_SESSION_INFO_HEADER_CHAT_ID] = metadata.get('chat_id')
                             if metadata and metadata.get('message_id'):
                                 headers[FORWARD_SESSION_INFO_HEADER_MESSAGE_ID] = metadata.get('message_id')
+
+                        # Inject Rakef identity header if available
+                        inject_rakef_identity_header(headers, metadata.get('chat_id'), user.id)
 
                         mcp_clients[server_id] = MCPClient()
                         await mcp_clients[server_id].connect(

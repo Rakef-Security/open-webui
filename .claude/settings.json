@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/jonathanendy/.local/**)",
+      "Read(//private/tmp/**)",
+      "Read(//Users/jonathanendy/**)",
+      "Bash(psql \"postgresql://post_malone:123456@localhost:54321/openwebui-test\" -c \"SELECT id, email, role FROM public.user LIMIT 20;\")",
+      "Bash(psql \"postgresql://post_malone:123456@localhost:54321/openwebui-test\" -c \"\\\\dt\")",
+      "Bash(psql \"postgresql://post_malone:123456@localhost:54321/openwebui-test\" -c \"SELECT id, email FROM public.auth WHERE email = 'jonathan.endy@rakef.io';\")",
+      "Bash(.venv/bin/python -c \"from passlib.context import CryptContext; ctx = CryptContext\\(schemes=['bcrypt']\\); print\\(ctx.hash\\('jonathan12'\\)\\)\")",
+      "Bash(.venv/bin/python -c \"import bcrypt; h = bcrypt.hashpw\\(b'jonathan12', bcrypt.gensalt\\(\\)\\); print\\(h.decode\\(\\)\\)\")",
+      "Bash(psql postgresql://post_malone:123456@localhost:54321/openwebui-test -c 'UPDATE public.auth SET password = '\\\\''$2b$12$GDwjQLePVoZ5PhUyISD2vu31jnRHRIRC06g6Qv5Mla/mjmbCODiym'\\\\'' WHERE email = '\\\\''jonathan.endy@rakef.io'\\\\'';')",
+      "Bash(git fetch:*)"
+    ]
+  }
+}

@@ -35,6 +35,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.rakef import generate_rakef_identity_for_chat
 
 log = logging.getLogger(__name__)
 
@@ -549,12 +550,19 @@ async def get_user_chat_list_by_user_id(
 @router.post('/new', response_model=Optional[ChatResponse])
 async def create_new_chat(
     form_data: ChatForm,
+    request: Request,
     user=Depends(get_verified_user),
     db: Session = Depends(get_session),
 ):
     try:
-        chat = Chats.insert_new_chat(user.id, form_data, db=db)
+        rakef_identity = await generate_rakef_identity_for_chat(
+            getattr(request.app.state, 'rakef_tool', None),
+            user.email, user.id, chat=form_data.chat,
+        )
+        chat = Chats.insert_new_chat(user.id, form_data, db=db, rakef_identity=rakef_identity)
         return ChatResponse(**chat.model_dump())
+    except HTTPException:
+        raise
     except Exception as e:
         log.exception(e)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
